@@ -1,1 +1,1107 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>تیونر — کوک‌کن حرفه‌ای</title>
+<style>
+  :root{
+    --bg-0:#150f0b;
+    --bg-1:#1d1611;
+    --bg-2:#251b14;
+    --wood:#3a291d;
+    --brass:#c9a24b;
+    --brass-dim:#8a7038;
+    --string:#ede6d6;
+    --string-dim:#9c8f7d;
+    --flat:#c1533e;
+    --sharp:#c1533e;
+    --in-tune:#7fae6f;
+    --close:#d9a441;
+  }
 
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+
+  body{
+    background:
+      radial-gradient(ellipse 900px 600px at 50% -10%, #2a1e15 0%, var(--bg-0) 60%),
+      var(--bg-0);
+    color:var(--string);
+    font-family:Tahoma,'Segoe UI','Vazirmatn',sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    padding:28px 16px 60px;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .num{font-family:'DM Mono','Courier New',monospace;}
+
+  header{
+    width:100%;
+    max-width:420px;
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom:22px;
+  }
+
+  header .title{
+    font-size:14px;
+    letter-spacing:.14em;
+    color:var(--brass);
+    font-weight:600;
+  }
+
+  header .sub{
+    font-size:11px;
+    color:var(--string-dim);
+    letter-spacing:.05em;
+  }
+
+  /* string rack — six strings, thickness = real gauge feel */
+  .rack{
+    width:100%;
+    max-width:420px;
+    background:linear-gradient(180deg, var(--wood), #2c1f16);
+    border:1px solid #4a3626;
+    border-radius:14px;
+    padding:14px 18px;
+    margin-bottom:22px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  .rack-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:6px;
+  }
+
+  .peg{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+    padding:8px 2px;
+    border-radius:8px;
+    cursor:pointer;
+    transition:background .2s ease;
+    position:relative;
+  }
+
+  .peg:hover{background:rgba(201,162,75,.08);}
+
+  .peg .label{
+    font-size:13px;
+    font-weight:700;
+    color:var(--string-dim);
+    font-family:'DM Mono','Courier New',monospace;
+  }
+
+  .peg .wire{
+    width:100%;
+    height:var(--gauge,2px);
+    background:linear-gradient(90deg, transparent, var(--string-dim) 15%, var(--string-dim) 85%, transparent);
+    border-radius:2px;
+  }
+
+  .peg.active .label{color:var(--bg-0); }
+  .peg.active{background:var(--brass);}
+  .peg.active .wire{background:linear-gradient(90deg, transparent, var(--bg-0) 15%, var(--bg-0) 85%, transparent);}
+  .peg.locked{background:var(--in-tune);}
+  .peg.locked .label{color:var(--bg-0);}
+  .peg.locked .wire{background:linear-gradient(90deg, transparent, var(--bg-0) 15%, var(--bg-0) 85%, transparent);}
+
+  /* main gauge */
+  .gauge-wrap{
+    width:100%;
+    max-width:420px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    background:var(--bg-1);
+    border:1px solid #33261b;
+    border-radius:20px;
+    padding:26px 20px 22px;
+    box-shadow:0 20px 50px rgba(0,0,0,.4);
+  }
+
+  svg.dial{width:100%; max-width:320px; height:auto; display:block;}
+  .tick{stroke:var(--string-dim); stroke-width:1.5;}
+  .tick.center{stroke:var(--brass); stroke-width:2.5;}
+  .arc-track{fill:none; stroke:#2f2318; stroke-width:10;}
+  .arc-zone{fill:none; stroke:var(--in-tune); stroke-width:10; opacity:.55;}
+
+  .needle{
+    stroke:var(--brass);
+    stroke-width:3;
+    stroke-linecap:round;
+    transition:transform .12s cubic-bezier(.2,.9,.3,1);
+    filter:drop-shadow(0 0 4px rgba(201,162,75,.5));
+  }
+
+  .needle.flat{stroke:var(--flat);}
+  .needle.sharp{stroke:var(--sharp);}
+  .needle.tuned{stroke:var(--in-tune); filter:drop-shadow(0 0 8px rgba(127,174,111,.7));}
+  .pivot{fill:var(--brass);}
+
+  .readout{
+    display:flex;
+    align-items:baseline;
+    justify-content:center;
+    gap:6px;
+    margin-top:6px;
+  }
+
+  .note{
+    font-size:64px;
+    font-weight:700;
+    line-height:1;
+    color:var(--string);
+    transition:color .15s ease;
+  }
+
+  .note.tuned{color:var(--in-tune);}
+  .note.flat{color:var(--flat);}
+  .note.sharp{color:var(--sharp);}
+
+  .octave{
+    font-size:22px;
+    color:var(--string-dim);
+    font-family:'DM Mono','Courier New',monospace;
+  }
+
+  .freq{
+    margin-top:4px;
+    font-size:13px;
+    letter-spacing:.05em;
+    color:var(--string-dim);
+    font-family:'DM Mono','Courier New',monospace;
+  }
+
+  .freq b{color:var(--brass); font-weight:600;}
+
+  .status{
+    margin-top:14px;
+    font-size:13px;
+    letter-spacing:.03em;
+    padding:6px 14px;
+    border-radius:20px;
+    background:#2a1e15;
+    color:var(--string-dim);
+    min-height:14px;
+  }
+
+  .status.tuned{color:var(--in-tune); background:rgba(127,174,111,.12);}
+  .status.flat{color:var(--flat); background:rgba(193,83,62,.1);}
+  .status.sharp{color:var(--sharp); background:rgba(193,83,62,.1);}
+
+  .controls{
+    margin-top:24px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+  }
+
+  .mic-btn{
+    width:64px; height:64px;
+    border-radius:50%;
+    border:1px solid var(--brass-dim);
+    background:var(--bg-2);
+    color:var(--brass);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    transition:all .2s ease;
+    position:relative;
+  }
+
+  .mic-btn:hover{border-color:var(--brass);}
+
+  .mic-btn.listening{
+    background:var(--brass);
+    color:var(--bg-0);
+    box-shadow:0 0 0 6px rgba(201,162,75,.12);
+  }
+
+  .mic-btn svg{width:26px; height:26px;}
+
+  .hint{
+    font-size:12px;
+    color:var(--string-dim);
+    margin-top:14px;
+    text-align:center;
+    max-width:280px;
+    line-height:1.8;
+  }
+
+  .a4-row{
+    margin-top:18px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:12px;
+    color:var(--string-dim);
+  }
+
+  .a4-row button{
+    width:22px; height:22px;
+    border-radius:6px;
+    border:1px solid #4a3626;
+    background:var(--bg-2);
+    color:var(--string);
+    cursor:pointer;
+    font-size:14px;
+    line-height:1;
+  }
+
+  .a4-row button:hover{border-color:var(--brass);}
+  .a4-row .a4val{
+    color:var(--brass);
+    font-family:'DM Mono','Courier New',monospace;
+    min-width:34px;
+    text-align:center;
+  }
+
+  footer{
+    margin-top:26px;
+    font-size:11px;
+    color:#5c5044;
+    letter-spacing:.05em;
+  }
+
+  .credit{
+    margin-top:18px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:13px;
+    color:var(--string-dim);
+  }
+
+  .credit-letters{
+    display:inline-flex;
+    gap:3px;
+    direction:ltr;
+  }
+
+  .credit-letters span{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:20px;
+    height:20px;
+    border-radius:5px;
+    font-family:'DM Mono','Courier New',monospace;
+    font-size:12px;
+    font-weight:700;
+    color:#fff;
+  }
+
+  .g-blue{background:#4285F4;}
+  .g-red{background:#EA4335;}
+  .g-yellow{background:#FBBC05;}
+  .g-green{background:#34A853;}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div>
+    <div class="title">تیونر</div>
+    <div class="sub">کوک‌کن دقیق برای گیتار و سازهای زهی</div>
+  </div>
+  <div class="sub num" id="a4label">A4 = 440</div>
+</header>
+
+<div class="rack">
+  <div class="rack-row" id="stringRack"></div>
+</div>
+
+<div class="gauge-wrap">
+  <svg class="dial" viewBox="0 0 320 200">
+
+    <!-- outer track arc: 180deg semicircle -->
+    <path class="arc-track" d="M 30 160 A 130 130 0 0 1 290 160"></path>
+
+    <!-- in-tune zone highlight (small arc near center) -->
+    <path class="arc-zone" d="M 148 32.4 A 130 130 0 0 1 172 32.4"></path>
+
+    <!-- ticks every 10 cents from -50 to 50 -->
+    <g id="ticks"></g>
+
+    <!-- needle -->
+    <line class="needle" id="needle" x1="160" y1="160" x2="160" y2="45"></line>
+    <circle class="pivot" cx="160" cy="160" r="6"></circle>
+
+  </svg>
+
+  <div class="readout">
+    <span class="note num" id="noteName">—</span>
+    <span class="octave num" id="octave"></span>
+  </div>
+
+  <div class="freq">
+    فرکانس:
+    <b id="freqVal" class="num">0.0</b>
+    هرتز &nbsp;·&nbsp;
+    <span id="centsVal" class="num">0</span>
+    سنت
+  </div>
+
+  <div class="status" id="statusText">میکروفون را فعال کنید</div>
+
+  <div class="controls">
+    <button class="mic-btn" id="micBtn" aria-label="شروع/توقف شنیدن">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+        <line x1="12" y1="19" x2="12" y2="23"></line>
+        <line x1="8" y1="23" x2="16" y2="23"></line>
+
+      </svg>
+    </button>
+  </div>
+
+  <div class="a4-row">
+    <button id="a4down">−</button>
+    <span>دیاپازون:</span>
+    <span class="a4val" id="a4valDisplay">440</span>
+    <button id="a4up">+</button>
+  </div>
+
+  <div class="hint">
+    روی هر پرده از رک بالا بزنید تا سیم مورد نظر هایلایت شود،
+    یا هر سیمی را بنوازید تا خودکار شناسایی شود.
+  </div>
+
+</div>
+
+<footer>
+  کوک استاندارد گیتار: E2 · A2 · D3 · G3 · B3 · E4
+</footer>
+
+<div class="credit">
+  <span>ساخته شده توسط</span>
+  <span class="credit-letters">
+    <span class="g-blue">A</span>
+    <span class="g-red">b</span>
+    <span class="g-yellow">e</span>
+    <span class="g-green">l</span>
+  </span>
+</div>
+
+<script>
+(function(){
+
+  const NOTE_NAMES = [
+    'C','C#','D','D#','E','F',
+    'F#','G','G#','A','A#','B'
+  ];
+
+  const GUITAR_STRINGS = [
+    {name:'E', octave:2, midi:40},
+    {name:'A', octave:2, midi:45},
+    {name:'D', octave:3, midi:50},
+    {name:'G', octave:3, midi:55},
+    {name:'B', octave:3, midi:59},
+    {name:'E', octave:4, midi:64}
+  ];
+
+  let A4 = 440;
+
+  // ---- build string rack ----
+
+  const rack = document.getElementById('stringRack');
+
+  const gauges = [7,5.5,4.2,3,2,1.5];
+
+  GUITAR_STRINGS.forEach((s,i)=>{
+
+    const el = document.createElement('div');
+
+    el.className = 'peg';
+
+    el.style.setProperty(
+      '--gauge',
+      gauges[i]+'px'
+    );
+
+    el.dataset.midi = s.midi;
+
+    el.innerHTML =
+      `<div class="label">${s.name}${s.octave}</div>
+       <div class="wire"></div>`;
+
+    rack.appendChild(el);
+
+  });
+
+  const pegEls = Array.from(rack.children);
+
+
+  // ---- ticks on dial ----
+
+  const ticksG = document.getElementById('ticks');
+
+  const cx=160, cy=160, r1=118, r2=130;
+
+  for(let c=-50;c<=50;c+=10){
+
+    const angle =
+      (c/50)*80 * Math.PI/180;
+
+    const x1 =
+      cx + r1*Math.sin(angle);
+
+    const y1 =
+      cy - r1*Math.cos(angle);
+
+    const x2 =
+      cx + r2*Math.sin(angle);
+
+    const y2 =
+      cy - r2*Math.cos(angle);
+
+    const t =
+      document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'line'
+      );
+
+    t.setAttribute('x1',x1);
+    t.setAttribute('y1',y1);
+    t.setAttribute('x2',x2);
+    t.setAttribute('y2',y2);
+
+    t.setAttribute(
+      'class',
+      c===0 ? 'tick center' : 'tick'
+    );
+
+    ticksG.appendChild(t);
+
+  }
+
+
+  function freqFromMidi(midi){
+    return A4 * Math.pow(2, (midi-69)/12);
+  }
+
+
+  function midiFromFreq(freq){
+    return 12*Math.log2(freq/A4) + 69;
+  }
+
+
+  function updateA4Label(){
+
+    document.getElementById('a4label').textContent =
+      'A4 = ' + A4;
+
+    document.getElementById('a4valDisplay').textContent =
+      A4;
+
+  }
+
+  updateA4Label();
+
+
+  document.getElementById('a4up').onclick = ()=>{
+    A4=Math.min(445,A4+1);
+    updateA4Label();
+  };
+
+
+  document.getElementById('a4down').onclick = ()=>{
+    A4=Math.max(435,A4-1);
+    updateA4Label();
+  };
+
+
+  // manual string select
+
+  let manualLock = null;
+
+  pegEls.forEach(el=>{
+
+    el.addEventListener('click', ()=>{
+
+      const midi =
+        parseInt(el.dataset.midi,10);
+
+      manualLock =
+        (manualLock===midi)
+        ? null
+        : midi;
+
+      pegEls.forEach(p=>
+        p.classList.remove('active')
+      );
+
+      if(manualLock!==null)
+        el.classList.add('active');
+
+    });
+
+  });
+
+
+  // ---- audio / pitch detection ----
+
+  let audioCtx=null,
+      analyser=null,
+      mic=null,
+      rafId=null,
+      buf=null;
+
+  const micBtn =
+    document.getElementById('micBtn');
+
+  let listening = false;
+
+
+  micBtn.addEventListener('click', async ()=>{
+
+    if(listening){
+      stopListening();
+      return;
+    }
+
+    try{
+
+      const stream =
+        await navigator.mediaDevices.getUserMedia({
+          audio:{
+            echoCancellation:false,
+            noiseSuppression:false,
+            autoGainControl:false
+          }
+        });
+
+      audioCtx =
+        new (window.AudioContext ||
+             window.webkitAudioContext)();
+
+      mic =
+        audioCtx.createMediaStreamSource(stream);
+
+      analyser =
+        audioCtx.createAnalyser();
+
+      analyser.fftSize = 2048;
+
+      mic.connect(analyser);
+
+      buf =
+        new Float32Array(
+          analyser.fftSize
+        );
+
+      listening = true;
+
+      micBtn.classList.add('listening');
+
+      setStatus(
+        'در حال گوش دادن…',
+        ''
+      );
+
+      loop();
+
+    }catch(err){
+
+      let msg =
+        'دسترسی به میکروفون رد شد';
+
+      if(
+        err.name === 'NotAllowedError' ||
+        err.name === 'PermissionDeniedError'
+      ){
+
+        msg =
+          'دسترسی میکروفون مسدود است — از تنظیمات مرورگر اجازه بدهید';
+
+      }else if(
+        err.name === 'NotFoundError' ||
+        err.name === 'DevicesNotFoundError'
+      ){
+
+        msg =
+          'میکروفونی پیدا نشد';
+
+      }else if(
+        err.name === 'NotReadableError'
+      ){
+
+        msg =
+          'میکروفون توسط برنامه دیگری اشغال است';
+
+      }else if(
+        !window.isSecureContext
+      ){
+
+        msg =
+          'این صفحه باید روی https یا localhost باز شود';
+
+      }
+
+      setStatus(msg,'flat');
+
+      console.error(
+        'Mic error:',
+        err.name,
+        err.message
+      );
+
+    }
+
+  });
+
+
+  function stopListening(){
+
+    listening = false;
+
+    micBtn.classList.remove('listening');
+
+    if(rafId)
+      cancelAnimationFrame(rafId);
+
+    if(audioCtx)
+      audioCtx.close();
+
+    setStatus(
+      'میکروفون را فعال کنید',
+      ''
+    );
+
+    resetDisplay();
+
+  }
+
+
+  function resetDisplay(){
+
+    document.getElementById('noteName').textContent='—';
+
+    document.getElementById('octave').textContent='';
+
+    document.getElementById('freqVal').textContent='0.0';
+
+    document.getElementById('centsVal').textContent='0';
+
+    document.getElementById('noteName').className='note num';
+
+    setNeedle(0,'');
+
+    pegEls.forEach(p=>
+      p.classList.remove('locked')
+    );
+
+  }
+
+
+  function loop(){
+
+    if(!listening)
+      return;
+
+    analyser.getFloatTimeDomainData(buf);
+
+    const freq =
+      autoCorrelate(
+        buf,
+        audioCtx.sampleRate
+      );
+
+    if(freq>0 && freq<1500){
+      handlePitch(freq);
+    }
+
+    rafId =
+      requestAnimationFrame(loop);
+
+  }
+
+
+  function handlePitch(freq){
+
+    const midiFloat =
+      midiFromFreq(freq);
+
+    let targetMidi;
+
+    if(manualLock!==null){
+
+      targetMidi = manualLock;
+
+    }else{
+
+      targetMidi =
+        Math.round(midiFloat);
+
+    }
+
+    const cents =
+      Math.round(
+        (midiFloat - targetMidi) * 100
+      );
+
+    const clamped =
+      Math.max(
+        -50,
+        Math.min(50,cents)
+      );
+
+
+    const noteIdx =
+      ((Math.round(midiFloat) % 12) + 12) % 12;
+
+    const octave =
+      Math.floor(
+        Math.round(midiFloat)/12
+      ) - 1;
+
+
+    const noteEl =
+      document.getElementById('noteName');
+
+    noteEl.textContent =
+      NOTE_NAMES[noteIdx];
+
+    document.getElementById('octave').textContent =
+      octave;
+
+    document.getElementById('freqVal').textContent =
+      freq.toFixed(1);
+
+    document.getElementById('centsVal').textContent =
+      (cents>0?'+':'')+cents;
+
+
+    let state = 'tuned';
+
+    if(cents < -5)
+      state='flat';
+    else if(cents > 5)
+      state='sharp';
+
+
+    noteEl.className =
+      'note num ' + state;
+
+    setNeedle(
+      clamped,
+      state
+    );
+
+
+    if(state==='tuned')
+      setStatus(
+        'کوک است ✓',
+        'tuned'
+      );
+    else if(state==='flat')
+      setStatus(
+        'کمی بم — سفت‌تر کنید',
+        'flat'
+      );
+    else
+      setStatus(
+        'کمی زیر — شل‌تر کنید',
+        'sharp'
+      );
+
+
+    // highlight nearest guitar string automatically
+    // (only if not manually locked)
+
+    pegEls.forEach(p=>
+      p.classList.remove(
+        'locked',
+        'active'
+      )
+    );
+
+
+    if(manualLock!==null){
+
+      const el =
+        pegEls.find(
+          p =>
+            parseInt(
+              p.dataset.midi,
+              10
+            ) === manualLock
+        );
+
+      if(el)
+        el.classList.add(
+          state==='tuned'
+          ? 'locked'
+          : 'active'
+        );
+
+    }else{
+
+      let nearest =
+        GUITAR_STRINGS[0];
+
+      let best=Infinity;
+
+
+      GUITAR_STRINGS.forEach(s=>{
+
+        const d =
+          Math.abs(
+            s.midi - midiFloat
+          );
+
+        if(d<best){
+
+          best=d;
+          nearest=s;
+
+        }
+
+      });
+
+
+      if(best < 1.5){
+
+        const el =
+          pegEls.find(
+            p =>
+              parseInt(
+                p.dataset.midi,
+                10
+              ) === nearest.midi
+          );
+
+        if(el)
+          el.classList.add(
+            state==='tuned'
+            ? 'locked'
+            : 'active'
+          );
+
+      }
+
+    }
+
+  }
+
+
+  function setNeedle(cents,state){
+
+    const angle =
+      (cents/50)*80;
+
+    const needle =
+      document.getElementById('needle');
+
+    needle.setAttribute(
+      'transform',
+      `rotate(${angle} 160 160)`
+    );
+
+    needle.className.baseVal =
+      'needle' +
+      (state ? ' '+state : '');
+
+  }
+
+
+  function setStatus(text,cls){
+
+    const el =
+      document.getElementById('statusText');
+
+    el.textContent = text;
+
+    el.className =
+      'status' +
+      (cls ? ' '+cls : '');
+
+  }
+
+
+  // ---- autocorrelation pitch detection (ACF-based) ----
+
+  function autoCorrelate(
+    buffer,
+    sampleRate
+  ){
+
+    const SIZE =
+      buffer.length;
+
+    let rms = 0;
+
+    for(let i=0;i<SIZE;i++){
+      rms += buffer[i]*buffer[i];
+    }
+
+    rms =
+      Math.sqrt(
+        rms/SIZE
+      );
+
+    if(rms < 0.01)
+      return -1;
+
+
+    let r1=0,
+        r2=SIZE-1;
+
+    const thres = 0.2;
+
+
+    for(let i=0;i<SIZE/2;i++){
+
+      if(Math.abs(buffer[i])<thres){
+
+        r1=i;
+        break;
+
+      }
+
+    }
+
+
+    for(let i=1;i<SIZE/2;i++){
+
+      if(
+        Math.abs(
+          buffer[SIZE-i]
+        )<thres
+      ){
+
+        r2=SIZE-i;
+        break;
+
+      }
+
+    }
+
+
+    const trimmed =
+      buffer.slice(r1,r2);
+
+    const N =
+      trimmed.length;
+
+    if(N<2)
+      return -1;
+
+
+    const c =
+      new Float32Array(N);
+
+
+    for(let lag=0;lag<N;lag++){
+
+      let sum=0;
+
+      for(
+        let i=0;
+        i<N-lag;
+        i++
+      ){
+
+        sum +=
+          trimmed[i] *
+          trimmed[i+lag];
+
+      }
+
+      c[lag]=sum;
+
+    }
+
+
+    let d=0;
+
+    while(
+      d<N-1 &&
+      c[d]>c[d+1]
+    ){
+
+      d++;
+
+    }
+
+
+    let maxVal=-1,
+        maxPos=-1;
+
+
+    for(let i=d;i<N;i++){
+
+      if(c[i]>maxVal){
+
+        maxVal=c[i];
+        maxPos=i;
+
+      }
+
+    }
+
+
+    if(maxPos<=0)
+      return -1;
+
+
+    let T0=maxPos;
+
+
+    const x1 =
+      c[T0-1]||0;
+
+    const x2 =
+      c[T0]||0;
+
+    const x3 =
+      c[T0+1]||0;
+
+
+    const a =
+      (x1+x3-2*x2)/2;
+
+    const b =
+      (x3-x1)/2;
+
+
+    if(a)
+      T0 =
+        T0 - b/(2*a);
+
+
+    return sampleRate/T0;
+
+  }
+
+
+  window.addEventListener(
+    'beforeunload',
+    ()=>{
+      if(audioCtx)
+        audioCtx.close();
+    }
+  );
+
+})();
+</script>
+
+</body>
+  </html>
