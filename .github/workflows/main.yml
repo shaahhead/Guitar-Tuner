@@ -22,15 +22,21 @@ jobs:
       - name: Create Android project
         run: npx cap add android
 
+      - name: Add microphone permissions
+        run: |
+          sed -i '/<manifest/a\    <uses-permission android:name="android.permission.RECORD_AUDIO" />' \
+          android/app/src/main/AndroidManifest.xml
+
+          sed -i '/<manifest/a\    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />' \
+          android/app/src/main/AndroidManifest.xml
+
       - name: Set Android SDK 36
         run: |
           sed -i 's/compileSdkVersion = [0-9]*/compileSdkVersion = 36/' android/variables.gradle
           sed -i 's/targetSdkVersion = [0-9]*/targetSdkVersion = 36/' android/variables.gradle
 
-      - name: Add microphone permissions
-        run: |
-          sed -i '/<manifest/a\    <uses-permission android:name="android.permission.RECORD_AUDIO" />' android/app/src/main/AndroidManifest.xml
-          sed -i '/<manifest/a\    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />' android/app/src/main/AndroidManifest.xml
+      - name: Sync Capacitor
+        run: npx cap sync android
 
       - name: Prepare signing keystore
         env:
@@ -38,12 +44,21 @@ jobs:
         run: |
           echo "$KEYSTORE_BASE64" | base64 --decode > android/app/guitar-tuner-release.keystore
           test -s android/app/guitar-tuner-release.keystore
-          echo "Keystore successfully created."
+          echo "Keystore created successfully."
 
-      - name: Configure release signing
+      - name: Create signing properties
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          cat > android/keystore.properties <<EOF
+          storeFile=guitar-tuner-release.keystore
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEYSTORE_PASSWORD
+          EOF
+
+      - name: Configure release signing
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -51,40 +66,53 @@ jobs:
           path = Path("android/app/build.gradle")
           text = path.read_text()
 
+          header = """import java.util.Properties
+          import java.io.FileInputStream
+
+          def keystoreProperties = new Properties()
+          def keystorePropertiesFile = rootProject.file("keystore.properties")
+
+          if (keystorePropertiesFile.exists()) {
+              keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+          }
+
+          """
+
+          if "keystorePropertiesFile" not in text:
+              text = header + text
+
           signing_config = """    signingConfigs {
               release {
-                  storeFile file("${rootProject.projectDir}/app/guitar-tuner-release.keystore")
-                  storePassword System.getenv("KEYSTORE_PASSWORD")
-                  keyAlias System.getenv("KEY_ALIAS")
-                  keyPassword System.getenv("KEYSTORE_PASSWORD")
+                  storeFile file(keystoreProperties['storeFile'])
+                  storePassword keystoreProperties['storePassword']
+                  keyAlias keystoreProperties['keyAlias']
+                  keyPassword keystoreProperties['keyPassword']
               }
           }
 
           """
 
-          text = text.replace(
-              "android {\n",
-              "android {\n" + signing_config,
-              1
-          )
+          if "signingConfigs {" not in text:
+              text = text.replace(
+                  "android {",
+                  "android {\n" + signing_config,
+                  1
+              )
 
-          release_config = """        release {
-              signingConfig signingConfigs.release
-          }
-          """
-
-          text = text.replace(
-              "    buildTypes {\n",
-              "    buildTypes {\n" + release_config,
-              1
-          )
+          if "signingConfig signingConfigs.release" not in text:
+              text = text.replace(
+                  "buildTypes {",
+                  """buildTypes {
+              release {
+                  signingConfig signingConfigs.release
+              }
+          """,
+                  1
+              )
 
           path.write_text(text)
           print("Release signing configured successfully.")
           PY
-
-      - name: Sync Capacitor
-        run: npx cap sync android
 
       - name: Setup Java
         uses: actions/setup-java@v4
