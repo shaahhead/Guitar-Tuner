@@ -29,11 +29,8 @@ jobs:
 
       - name: Add microphone permissions
         run: |
-          sed -i '/<manifest/a\    <uses-permission android:name="android.permission.RECORD_AUDIO" />' \
-          android/app/src/main/AndroidManifest.xml
-
-          sed -i '/<manifest/a\    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />' \
-          android/app/src/main/AndroidManifest.xml
+          sed -i '/<manifest/a\    <uses-permission android:name="android.permission.RECORD_AUDIO" />' android/app/src/main/AndroidManifest.xml
+          sed -i '/<manifest/a\    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />' android/app/src/main/AndroidManifest.xml
 
       - name: Prepare signing keystore
         env:
@@ -54,34 +51,36 @@ jobs:
           path = Path("android/app/build.gradle")
           text = path.read_text()
 
-          signing_config = '''
-              signingConfigs {
-                  release {
-                      storeFile file("${rootProject.projectDir}/app/guitar-tuner-release.keystore")
-                      storePassword System.getenv("KEYSTORE_PASSWORD")
-                      keyAlias System.getenv("KEY_ALIAS")
-                      keyPassword System.getenv("KEYSTORE_PASSWORD")
-                  }
+          signing_config = """    signingConfigs {
+              release {
+                  storeFile file("${rootProject.projectDir}/app/guitar-tuner-release.keystore")
+                  storePassword System.getenv("KEYSTORE_PASSWORD")
+                  keyAlias System.getenv("KEY_ALIAS")
+                  keyPassword System.getenv("KEYSTORE_PASSWORD")
               }
-          '''
+          }
+
+          """
 
           text = text.replace(
-              "android {",
-              "android {\\n" + signing_config,
+              "android {\n",
+              "android {\n" + signing_config,
               1
           )
 
+          release_config = """        release {
+              signingConfig signingConfigs.release
+          }
+          """
+
           text = text.replace(
-              "buildTypes {",
-              '''buildTypes {
-                  release {
-                      signingConfig signingConfigs.release
-                  }
-          ''',
+              "    buildTypes {\n",
+              "    buildTypes {\n" + release_config,
               1
           )
 
           path.write_text(text)
+          print("Release signing configured successfully.")
           PY
 
       - name: Sync Capacitor
