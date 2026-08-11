@@ -1,0 +1,8 @@
+{
+  "appId": "com.guitartuner.offline",
+  "appName": "Guitar Tuner",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}
